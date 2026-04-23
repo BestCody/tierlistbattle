@@ -60,8 +60,9 @@ function connectSocket() {
 
   S.socket.on('rooms_list',   ({rooms})          => renderRoomsList(rooms));
   S.socket.on('room_created', ({room})            => { S.roomId=room.id; S.roomHostId=room.hostId; showLobby({room,players:[{userId:S.user.id,username:S.user.username}]}); });
-  S.socket.on('room_joined',  ({room})            => { S.roomId=room.id; S.roomHostId=room.hostId; });
+  S.socket.on('room_joined',  ({room,players})    => { S.roomId=room.id; S.roomHostId=room.hostId; showLobby({room,players}); });
   S.socket.on('room_updated', ({players,hostId,room}) => { S.roomHostId=hostId; if(room) S.roomId=room.id; updateLobby(players,hostId,room); });
+  S.socket.on('rooms_changed', ({rooms})          => { if(document.getElementById('rooms-list')) renderRoomsList(rooms); });
   S.socket.on('room_left',    ()                  => { S.roomId=null; });
 
   S.socket.on('match_started',     showMatchStarting);
@@ -513,14 +514,18 @@ function tryJoinRoom(roomId, hasPassword) {
 // ── LOBBY ─────────────────────────────────────────────────────────────
 function showLobby({room, players}) {
   S.roomId = room.id;
-  $app().innerHTML = navHTML() + `<div class="lobby-screen screen">
-    <div class="lobby-card">
-      <div class="lobby-room-name">${room.name}</div>
-      <div class="lobby-capacity" id="lobby-cap">${players.length}/${room.maxPlayers} players</div>
-      <div class="player-list" id="lobby-players"></div>
-      <div id="lobby-hint" class="lobby-hint" style="font-size:13px;color:var(--text-3);text-align:center;margin-bottom:14px"></div>
-      <div id="lobby-actions" style="display:flex;flex-direction:column;gap:10px"></div>
+  $app().innerHTML = navHTML() + `<div class="queue-screen screen">
+    <div class="queue-orb"><div class="queue-icon">🎮</div></div>
+    <div style="text-align:center">
+      <h2 class="queue-title">${room.name}</h2>
+      <p class="queue-count" id="lobby-cap">
+        <span>${players.length}</span> / ${room.maxPlayers} players
+        ${room.hasPassword ? ' · 🔒' : ''}
+      </p>
     </div>
+    <div class="player-list" id="lobby-players" style="width:100%;max-width:360px;display:flex;flex-direction:column;gap:8px"></div>
+    <p id="lobby-hint" style="font-size:13px;color:var(--txt3);font-weight:500"></p>
+    <div id="lobby-actions" style="display:flex;flex-direction:column;gap:10px;width:100%;max-width:280px"></div>
   </div>`;
   updateLobby(players, room.hostId, room);
 }
@@ -532,17 +537,19 @@ function updateLobby(players, hostId, room) {
   if (!listEl) return;
   S.roomHostId = hostId;
   const isHost = S.user.id === hostId;
-  if (capEl && room) capEl.textContent=`${players.length}/${room.maxPlayers} players${room.hasPassword?' · 🔒 Password protected':''}`;
+  if (capEl && room) capEl.innerHTML=`<span>${players.length}</span> / ${room.maxPlayers} players${room.hasPassword?' · 🔒':''}`;
   listEl.innerHTML=players.map((p,i)=>`
     <div class="player-item">
       <div class="player-avatar ${avClass(i)}">${initials(p.username)}</div>
       <span class="player-item-name">${p.username}${p.userId===S.user.id?' (you)':''}</span>
       ${p.userId===hostId?'<span class="host-badge">HOST</span>':''}
     </div>`).join('');
-  if (hintEl) hintEl.textContent=isHost?(players.length<2?'Waiting for at least 1 more player…':'Ready! Hit start when everyone\'s here.'):'Waiting for the host to start…';
+  if (hintEl) hintEl.textContent=isHost
+    ? (players.length<2?'Waiting for at least 1 more player…':'Ready! Start whenever.')
+    : 'Waiting for the host to start…';
   if (actEl) actEl.innerHTML=`
-    ${isHost?`<button class="btn btn-primary btn-lg" onclick="S.socket.emit('start_match')" ${players.length<2?'disabled':''}>▶ Start Game</button>`:''}
-    <button class="btn btn-danger" onclick="leaveRoom()">Leave Room</button>`;
+    ${isHost?`<button class="btn btn-primary btn-lg" style="width:100%" onclick="S.socket.emit('start_match')" ${players.length<2?'disabled':''}>▶ Start Game</button>`:''}
+    <button class="btn btn-danger btn-full" onclick="leaveRoom()">Leave Room</button>`;
 }
 function leaveRoom() { S.socket.emit('leave_room'); S.roomId=null; showPlay(); }
 

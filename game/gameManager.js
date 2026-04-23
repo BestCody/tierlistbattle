@@ -96,6 +96,7 @@ class GameManager {
     socket._roomId = roomId;
     socket.emit('room_created', { room: this._safeRoom(room) });
     this._emitRoomUpdate(roomId);
+    this._broadcastRooms();
   }
 
   joinRoom(socket, { roomId, password } = {}) {
@@ -110,8 +111,9 @@ class GameManager {
     room.players.push({ userId, username, socketId: socket.id });
     socket.join(roomId);
     socket._roomId = roomId;
-    socket.emit('room_joined', { room: this._safeRoom(room) });
+    socket.emit('room_joined', { room: this._safeRoom(room), players: room.players.map(p=>({userId:p.userId,username:p.username})) });
     this._emitRoomUpdate(roomId);
+    this._broadcastRooms();
   }
 
   leaveRoom(socket) {
@@ -131,6 +133,7 @@ class GameManager {
       this._emitRoomUpdate(roomId);
     }
     socket.emit('room_left');
+    this._broadcastRooms();
   }
 
   hostStart(socket) {
@@ -430,6 +433,15 @@ class GameManager {
 
   _safeRoom(room) {
     return { id: room.id, name: room.name, maxPlayers: room.maxPlayers, hasPassword: !!room.password, hostId: room.hostId, status: room.status };
+  }
+
+  _broadcastRooms() {
+    const rooms = [];
+    this.rooms.forEach(r => {
+      if (r.status === 'waiting')
+        rooms.push({ id:r.id, name:r.name, players:r.players.length, maxPlayers:r.maxPlayers, hasPassword:!!r.password });
+    });
+    this.io.emit('rooms_changed', { rooms });
   }
 }
 
