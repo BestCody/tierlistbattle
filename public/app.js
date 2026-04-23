@@ -64,6 +64,7 @@ function connectSocket() {
   S.socket.on('room_updated', ({players,hostId,room}) => { S.roomHostId=hostId; if(room) S.roomId=room.id; updateLobby(players,hostId,room); });
   S.socket.on('rooms_changed', ({rooms})          => { if(document.getElementById('rooms-list')) renderRoomsList(rooms); });
   S.socket.on('room_left',    ()                  => { S.roomId=null; });
+  S.socket.on('room_closed',  ({message})         => { S.roomId=null; toast(message||'The room was closed.','error'); showPlay(); });
 
   S.socket.on('match_started',     showMatchStarting);
   S.socket.on('voting_started',    showVotingScreen);
@@ -424,8 +425,8 @@ function showSignup() {
       <h2>Create Account</h2>
       <form class="auth-fields" onsubmit="doRegister(event)">
         <div class="form-group"><label>Username</label><input class="input" id="r-username" type="text" placeholder="cool_gamer99" autocomplete="username" required/></div>
-        <div class="form-group"><label>Password</label><input class="input" id="r-password" type="password" placeholder="min. 6 characters" autocomplete="new-password" required/></div>
-        <div class="form-group"><label>Confirm Password</label><input class="input" id="r-confirm" type="password" placeholder="repeat password" autocomplete="new-password" required/></div>
+        <div class="form-group"><label>Password</label><input class="input" id="r-password" type="password" placeholder="Min 6 Characters" autocomplete="new-password" required/></div>
+        <div class="form-group"><label>Confirm Password</label><input class="input" id="r-confirm" type="password" placeholder="Repeat Password" autocomplete="new-password" required/></div>
         <div class="form-error" id="r-error"></div>
         <button class="btn btn-primary btn-full" type="submit">Create Account</button>
         ${S.googleEnabled?`<div class="divider"><span>or</span></div><a href="/api/auth/google" class="btn btn-google btn-full">Sign up with Google</a>`:''}
@@ -458,9 +459,9 @@ function showCreateRoom() {
         <div class="form-group"><label>Password <span style="color:var(--text-3);font-weight:400">(optional)</span></label><input class="input" id="cr-pass" type="password" placeholder="Leave blank for open room"/></div>
         <div class="form-group"><label>Max Players</label>
           <select class="input" id="cr-max">
-            <option value="2">2 players</option><option value="3">3 players</option>
-            <option value="4" selected>4 players</option><option value="5">5 players</option>
-            <option value="6">6 players</option>
+            <option value="2" style="background:#000;color:#fff">2 players</option><option value="3" style="background:#000;color:#fff">3 players</option>
+            <option value="4" selected style="background:#000;color:#fff">4 players</option><option value="5" style="background:#000;color:#fff">5 players</option>
+            <option value="6" style="background:#000;color:#fff">6 players</option>
           </select>
         </div>
       </div>

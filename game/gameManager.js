@@ -123,13 +123,23 @@ class GameManager {
     const room = this.rooms.get(roomId);
     if (!room) return;
 
+    const isHost = room.hostId === userId;
+
     room.players = room.players.filter(p => p.userId !== userId);
     socket.leave(roomId);
     socket._roomId = null;
 
-    if (room.players.length === 0) { this.rooms.delete(roomId); }
-    else {
-      if (room.hostId === userId) room.hostId = room.players[0].userId;
+    if (room.players.length === 0) {
+      this.rooms.delete(roomId);
+    } else if (isHost && room.status === 'waiting') {
+      // Host left a waiting room — notify and close it for everyone
+      this.io.to(roomId).emit('room_closed', { message: 'The host left the room.' });
+      room.players.forEach(p => {
+        const s = this.io.sockets.sockets.get(p.socketId);
+        if (s) { s.leave(roomId); s._roomId = null; }
+      });
+      this.rooms.delete(roomId);
+    } else {
       this._emitRoomUpdate(roomId);
     }
     socket.emit('room_left');
