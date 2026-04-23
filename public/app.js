@@ -24,7 +24,7 @@ function toast(msg, type='info', ms=3500) {
 }
 function initials(n){ return (n||'?').split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase(); }
 function avClass(i){ return `av-${i%6}`; }
-function winRate(w,l){ const g=w+l; return g===0?'—':Math.round(w/g*100)+'%'; }
+function winRate(w,l){ const wins=parseInt(w)||0, losses=parseInt(l)||0, g=wins+losses; return g===0?'—':Math.round(wins/g*100)+'%'; }
 
 // ── API ──────────────────────────────────────────────────────────────
 const api = {
@@ -186,9 +186,8 @@ async function renderDashboard() {
   try {
     const [me,board] = await Promise.all([api.me(), api.board()]);
     S.user = {...S.user,...me};
-    document.getElementById('s-wins').textContent   = me.wins;
-    document.getElementById('s-losses').textContent = me.losses;
-    document.getElementById('s-rounds').textContent = me.rounds_played;
+    document.getElementById('s-wins').textContent   = me.wins   || 0;
+    document.getElementById('s-losses').textContent = me.losses || 0;
     document.getElementById('s-ratio').textContent  = winRate(me.wins, me.losses);
     document.getElementById('lb-body').innerHTML = board.leaderboard.map((p,i)=>`
       <div class="lb-row ${['rank-1','rank-2','rank-3'][i]||''}">
